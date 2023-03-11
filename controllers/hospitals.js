@@ -1,13 +1,75 @@
-//@desc Get all hospitals.
-//@route GET /api/v1/hospitals
-
 const Hospital = require("../models/Hospital");
 
+//@desc Get all hospitals.
+//@route GET /api/v1/hospitals
 //@access Public
 exports.getHospitals = async (req, res, next) => {
+    let query;
+
+    //req.query copying
+    const reqQuery = {...req.query};
+
+    //Excluded Fields
+    const removeFields = ["select", "sort", "page", "limit"];
+
+    //Loop over remove fields and delete them for reqQuery
+    removeFields.forEach(param => delete reqQuery[param]);
+    console.log(reqQuery);
+
+    //query string creation
+    let queryStr = JSON.stringify(reqQuery);
+
+    //Regex operators creation
+    queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
+
+    //Resource finding
+    query = Hospital.find(JSON.parse(queryStr)).populate("appointments");
+
+    //Select fields
+    if (req.query.select) {
+        const fields = req.query.select.split(",").join(" ");
+        query = query.select(fields);
+    }
+
+    //Sort
+    if (req.query.sort) {
+        const sortBy = req.query.sort.split(",").join(" ");
+        query = query.sort(sortBy);
+    } else {
+        query = query.sort("-createdAt");
+    
+    }
+
+    //Pagination
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 25;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
     try {
-        const hospitals = await Hospital.find();
-        res.status(200).json({success : true, count : hospitals.length, data : hospitals});
+        const total = await Hospital.countDocuments();
+        query = query.skip(startIndex).limit(limit);
+
+        //Query execution
+        const hospitals = await query;
+        
+        //Pagination result
+        const pagination = {};
+        if(endIndex < total) {
+            pagination.next = {
+                page : page + 1,
+                limit
+            }
+        }
+
+        if(startIndex > 0) {
+            pagination.prev = {
+                page : page - 1,
+                limit
+            }
+        }
+
+        res.status(200).json({success : true, count : hospitals.length, pagination, data : hospitals});
     } catch(err) {
         res.status(400).json({success : false});
     }
@@ -59,10 +121,11 @@ exports.updateHospital = async (req, res, next) => {
 //@access Private
 exports.deleteHospital = async (req, res, next) => {
     try {
-        const hospital = await Hospital.findByIdAndDelete(req.params.id);
+        const hospital = await Hospital.findById(req.params.id);
         if(!hospital) {
-            res.status(400).json({success : false});
+            res.status(404).json({success : false, message : `Bootcamp not found with id of ${req.param.id}`});
         }
+        hospital.remove();
         res.status(200).json({success : true, data : {}});
     } catch(err) {
         res.status(400).json({success : false});

@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const hospitals = require("./routes/hospitals.js");
+const appointments = require("./routes/appointments.js");
 const auth = require("./routes/auth.js")
 const cookieParser = require("cookie-parser")
 const connectDB = require("./config/db");
@@ -12,6 +13,7 @@ const app = express();
 
 app.use(express.json());
 app.use("/api/v1/hospitals", hospitals);
+app.use("/api/v1/appointments", appointments);
 app.use("/api/v1/auth", auth);
 
 app.use(cookieParser());
