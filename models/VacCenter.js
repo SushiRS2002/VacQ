@@ -4,7 +4,7 @@ const sql = require("../config/vacCenterDB");
 const VacCenter = function(vacCenter) {
     this.id = vacCenter.id;
     this.name = vacCenter.name;
-    this.tel = vacCenter.tel;
+    this.tel = vacCenter.tel;zi
 };
 
 VacCenter.getAll = result => {
